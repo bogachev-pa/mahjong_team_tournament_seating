@@ -1,0 +1,1 @@
+# mahjong_team_tournament_seating
