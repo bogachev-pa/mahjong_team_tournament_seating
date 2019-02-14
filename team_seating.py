@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import itertools
+import random
 
 NUM_TEAMS = 17
 NUM_PLAYERS = NUM_TEAMS * 4
@@ -94,6 +95,9 @@ class Tournament(object):
         self.max_num_team_intersections = max(map(max, self.team_intersections_matrix))
         self.max_num_player_intersections = max(map(max, self.player_intersections_matrix))
 
+        self.print_intersections_stats()
+
+    def print_intersections_stats(self):
         print("")
         print("Team intersections matrix:")
         print('\n'.join([''.join(['{:4}'.format(item) for item in row]) for row in self.team_intersections_matrix]))
@@ -107,6 +111,52 @@ class Tournament(object):
         print("Internal: %u" % self.internal_team_intersections)
         print("Max number of team intersections: %u" % self.max_num_team_intersections)
         print("Max number of player intersections: %u" % self.max_num_player_intersections)
+
+    # very simple and slow algorithm for now
+    def remove_internal_intersections(self):
+        MAX_ITERATIONS = 10
+        iteration_number = 0
+
+        while True:
+            self.calculate_intersections()
+            if self.internal_team_intersections == 0:
+                print("Successfully removed internal intersections after %u iterations" % iteration_number)
+                break
+
+            if iteration_number == MAX_ITERATIONS:
+                print("Limit of iterations reached, exiting algorithm")
+                break
+
+            print("")
+            print("Iteration #%u" % iteration_number)
+
+            # each round in independent in terms of internal intersections
+            for r in self.rounds:
+                team_players_by_table = [[0 for x in range(NUM_TABLES_IN_ROUND)] for y in range(NUM_TEAMS)]
+                for t in r.tables:
+                    for p in t.players:
+                        team_players_by_table[p.team - 1][t.num - 1] += 1
+
+                for team in range(0, NUM_TEAMS):
+                    tables_without_this_team = [table for table in r.tables if team_players_by_table[team][table.num -1] == 0]
+
+                    for table in r.tables:
+                        if team_players_by_table[team][table.num - 1] < 2:
+                            continue
+
+                        players_from_this_team = [player for player in table.players if player.team == team + 1]
+
+                        random_table = random.choice(tables_without_this_team)
+                        random_this_player = random.choice(players_from_this_team)
+                        random_other_player = random.choice(random_table.players)
+
+                        table.players.remove(random_this_player)
+                        table.players.append(random_other_player)
+
+                        random_table.players.remove(random_other_player)
+                        random_table.players.append(random_this_player)
+
+            iteration_number += 1
 
 
 def generate_tournament_from_text(text):
@@ -165,10 +215,18 @@ def generate_text_from_tournament(tournament):
 def main():
     tournament = generate_tournament_from_text(seating_text)
 
-    new_text = generate_text_from_tournament(tournament)
-    print(new_text)
+    initial_seating = generate_text_from_tournament(tournament)
+    print("Initial seating:")
+    print(initial_seating)
 
+    tournament.remove_internal_intersections()
     tournament.calculate_intersections()
+
+    new_seating = generate_text_from_tournament(tournament)
+    print("")
+    print("New seating:")
+    print(new_seating)
+
 
 if __name__ == '__main__':
     main()
