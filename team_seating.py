@@ -166,7 +166,42 @@ class Tournament(object):
         print("Possible minimum = %u" % self.minimum_teams_intersections)
 
         # FIXME: this is stub
-        print("This is stub, cannot yet minimize teams intersections")
+        # Algorithm:
+        # 1. Iterate over each team.
+        # 2. Find which teams has minimum and maximum number of intersections with the current one.
+        # 3. Iterate over each round.
+        # 4. Check if in the given round current team plays with the team of maximum intersections.
+        #    If true, then check if there exists a pair of tables with 8 unique team, including table
+        #    with our team + teamMAX and table with teamMIN.
+        #    If true, swap players from teamMAX and teamMIN.
+        #    If any condition is not true, go to the next round.
+        # 5. Proceed to the next team.
+        # 6. Recalculate intersections and repeat algorithm, until we have minimized the maximum.
+
+        for team in range(0, settings['NUM_TEAMS']):
+            comp_team = 1 if team == 0 else 0
+
+            max_intr = self.team_intersections_matrix[team][comp_team]
+            min_intr = self.team_intersections_matrix[team][comp_team]
+
+            max_intr_team = comp_team
+            min_intr_team = comp_team
+
+            for __team in range(0, settings['NUM_TEAMS']):
+                if team == __team:
+                    continue
+
+                num_intr = self.team_intersections_matrix[team][__team]
+
+                if num_intr >= max_intr:
+                    max_intr_team = __team
+                    max_intr = num_intr
+
+                if self.team_intersections_matrix[team][__team] <= min_intr:
+                    min_intr_team = __team
+                    min_intr = num_intr
+
+            # TODO: p.3 and the rest
 
     # very simple and slow algorithm for now
     def minimize_players_intersections(self):
