@@ -42,6 +42,9 @@ class Tournament(object):
         else:
             self.rounds = []
 
+        self.minimum_players_intersections = (settings['NUM_ROUNDS'] * 3 // (settings['NUM_PLAYERS'] - 4)) + 1
+        self.minimum_teams_intersections = (settings['NUM_ROUNDS'] * 3 * 4 // (settings['NUM_TEAMS'] - 1)) + 1
+
         self.reinit_stats()
 
     def reinit_stats(self):
@@ -87,35 +90,43 @@ class Tournament(object):
         self.max_num_team_intersections = max(map(max, self.team_intersections_matrix))
         self.max_num_player_intersections = max(map(max, self.player_intersections_matrix))
 
-        self.print_intersections_stats()
-
-    def print_intersections_stats(self):
-        print("")
-        print("Team intersections matrix:")
-        print('\n'.join([''.join(['{:4}'.format(item) for item in row]) for row in self.team_intersections_matrix]))
-
-        # print("")
-        # print("Player intersections matrix:")
-        # print('\n'.join([''.join(['{:2}'.format(item) for item in row]) for row in self.player_intersections_matrix]))
-
+    def print_intersections_stats_short(self):
         print("")
         print("Tournament intersection stats:")
         print("Internal: %u" % self.internal_team_intersections)
         print("Max number of team intersections: %u" % self.max_num_team_intersections)
         print("Max number of player intersections: %u" % self.max_num_player_intersections)
 
+    def print_intersections_stats(self,
+                                  print_players_matrix=False,
+                                  print_team_matrix=False):
+        if print_team_matrix:
+            print("")
+            print("Team intersections matrix:")
+            print('\n'.join([''.join(['{:4}'.format(item) for item in row]) for row in self.team_intersections_matrix]))
+
+        if print_players_matrix:
+            print("")
+            print("Player intersections matrix:")
+            print('\n'.join([''.join(['{:2}'.format(item) for item in row]) for row in self.player_intersections_matrix]))
+
+        self.print_intersections_stats_short()
+
     # very simple and slow algorithm for now
     def remove_internal_intersections(self):
+        print("")
+        print("Removing internal intersections...")
         iteration_number = 0
 
         while True:
             self.calculate_intersections()
+            self.print_intersections_stats()
             if self.internal_team_intersections == 0:
                 print("Successfully removed internal intersections after %u iterations" % iteration_number)
                 break
 
             if iteration_number == settings['MAX_ITERATIONS']:
-                print("Limit of iterations reached, exiting algorithm")
+                print("Limit of iterations reached, could not remove internal intersections")
                 break
 
             print("")
@@ -146,6 +157,42 @@ class Tournament(object):
 
                         random_table.players.remove(random_other_player)
                         random_table.players.append(random_this_player)
+
+            iteration_number += 1
+
+    def minimize_team_intersections(self):
+        print("")
+        print("Minimizing teams intersections...")
+        print("Possible minimum = %u" % self.minimum_teams_intersections)
+
+        # FIXME: this is stub
+        print("This is stub, cannot yet minimize teams intersections")
+
+    # very simple and slow algorithm for now
+    def minimize_players_intersections(self):
+        print("")
+        print("Minimizing players intersections...")
+        print("Possible minimum = %u" % self.minimum_players_intersections)
+        iteration_number = 0
+
+        while True:
+            self.calculate_intersections()
+            self.print_intersections_stats()
+            if self.max_num_player_intersections == self.minimum_players_intersections:
+                print("Successfully minimized players intersections after %u iterations" % iteration_number)
+                break
+
+            if iteration_number == settings['MAX_ITERATIONS']:
+                print("Limit of iterations reached, could not minimize players intersections further")
+                break
+
+            print("")
+            print("Iteration #%u" % iteration_number)
+
+            # FIXME: this is stub
+            print("This is stub, cannot yet minimize players intersections")
+            print("")
+            break
 
             iteration_number += 1
 
@@ -247,8 +294,17 @@ def main():
     print("Initial seating:")
     print(initial_seating)
 
-    tournament.remove_internal_intersections()
     tournament.calculate_intersections()
+    print("Initial intersection stats:")
+    tournament.print_intersections_stats(print_team_matrix=True)
+
+    tournament.remove_internal_intersections()
+    tournament.minimize_team_intersections()
+    tournament.minimize_players_intersections()
+
+    tournament.calculate_intersections()
+    print("New intersection stats:")
+    tournament.print_intersections_stats(print_team_matrix=True)
 
     new_seating = generate_text_from_tournament(tournament)
     print("")
