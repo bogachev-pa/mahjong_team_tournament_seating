@@ -166,7 +166,6 @@ class Tournament(object):
         print("Minimizing teams intersections...")
         print("Possible minimum = %u" % self.minimum_teams_intersections)
 
-        # FIXME: this is stub
         # Algorithm:
         # 1. Iterate over each team.
         # 2. Find which teams has minimum and maximum number of intersections with the current one.
@@ -184,15 +183,12 @@ class Tournament(object):
         MAX_ITERS = 2000
 
         while iteration_number < MAX_ITERS:
-            # if (iteration_number % 10 == 0):
 
             self.calculate_intersections()
 
             if self.max_num_team_intersections == self.minimum_teams_intersections:
                 print("Successfully minimized team intersections to be %u after %u iteratinos" % (self.max_num_team_intersections, iteration_number))
                 break
-            # self.print_intersections_stats(print_team_matrix=True)
-            # self.print_intersections_stats(print_team_matrix=False)
 
             swaps_done = 0
 
@@ -286,9 +282,6 @@ class Tournament(object):
                 print("Successfully minimized players intersections after %u iterations" % iteration_number)
                 break
 
-            print("")
-            print("Iteration #%u" % iteration_number)
-
             swaps_done = 0
 
             for player in range(0, settings['NUM_PLAYERS']):
@@ -318,16 +311,26 @@ class Tournament(object):
                 if max_intr != self.max_num_player_intersections:
                     continue
 
-                for r in self.rounds:
-                    table_with_max = None
-                    table_with_min = None
-                    for t in r.tables:
-                        if len([p for p in t.players if p.player_id == player + 1 or p.player_id == __player + 1]) != 2:
-                            # not our round
-                            continue
+                our_player = self.players[player]
 
-                        # TODO: finish this code, swap the player with the other player from our team
-                        # in a way similar to team intersections minimization
+                for r in self.rounds:
+                    our_tables = [t for t in r.tables if len([p for p in t.players if p.player_id == player + 1 or p.player_id == max_intr_player + 1]) == 2]
+                    if not our_tables:
+                        continue
+
+                    our_table = our_tables[0]
+                    suitable_tables = [t for t in r.tables if t.num != our_table.num and [p for p in t.players if p.team == our_player.team]]
+                    best_table = min(suitable_tables,
+                                     key=lambda t: sum(map(lambda p: self.player_intersections_matrix[player][p.player_id - 1], t.players)))
+
+                    player_to_swap = [p for p in best_table.players if p.team == our_player.team][0]
+
+                    our_table.players.remove(our_player)
+                    our_table.players.append(player_to_swap)
+                    best_table.players.remove(player_to_swap)
+                    best_table.players.append(our_player)
+                    swaps_done += 1
+                    break
 
             if swaps_done == 0:
                 print("No more swaps can be done, finishing minimization after %u iterations", iteration_number)
