@@ -219,7 +219,9 @@ class Tournament(object):
                 if max_intr != self.max_num_team_intersections:
                     continue
 
-                for r in self.rounds:
+                randomly_shuffled_rounds = self.rounds[:]
+                random.shuffle(randomly_shuffled_rounds)
+                for r in randomly_shuffled_rounds:
                     table_with_max = None
                     player_from_max = None
                     table_with_min = None
@@ -313,7 +315,9 @@ class Tournament(object):
 
                 our_player = self.players[player]
 
-                for r in self.rounds:
+                randomly_shuffled_rounds = self.rounds[:]
+                random.shuffle(randomly_shuffled_rounds)
+                for r in randomly_shuffled_rounds:
                     our_tables = [t for t in r.tables if len([p for p in t.players if p.player_id == player + 1 or p.player_id == max_intr_player + 1]) == 2]
                     if not our_tables:
                         continue
@@ -325,12 +329,22 @@ class Tournament(object):
 
                     player_to_swap = [p for p in best_table.players if p.team == our_player.team][0]
 
+                    previous_intersections = self.max_num_player_intersections
                     our_table.players.remove(our_player)
                     our_table.players.append(player_to_swap)
                     best_table.players.remove(player_to_swap)
                     best_table.players.append(our_player)
-                    swaps_done += 1
-                    break
+                    self.calculate_intersections()
+                    if self.max_num_player_intersections > previous_intersections:
+                        # revert bad swapping
+                        our_table.players.remove(player_to_swap)
+                        our_table.players.append(our_player)
+                        best_table.players.remove(our_player)
+                        best_table.players.append(player_to_swap)
+                        self.calculate_intersections()
+                    else:
+                        swaps_done += 1
+                        break
 
             if swaps_done == 0:
                 print("No more swaps can be done, finishing minimization after %u iterations", iteration_number)
