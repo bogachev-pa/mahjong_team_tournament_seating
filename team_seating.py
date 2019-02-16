@@ -3,6 +3,7 @@
 import itertools
 import os
 import random
+import time
 
 from optparse import OptionParser
 
@@ -178,30 +179,97 @@ class Tournament(object):
         # 5. Proceed to the next team.
         # 6. Recalculate intersections and repeat algorithm, until we have minimized the maximum.
 
-        for team in range(0, settings['NUM_TEAMS']):
-            comp_team = 1 if team == 0 else 0
+        iteration_number = 0
 
-            max_intr = self.team_intersections_matrix[team][comp_team]
-            min_intr = self.team_intersections_matrix[team][comp_team]
+        MAX_ITERS = 2000
 
-            max_intr_team = comp_team
-            min_intr_team = comp_team
+        while iteration_number < MAX_ITERS:
+            # if (iteration_number % 10 == 0):
 
-            for __team in range(0, settings['NUM_TEAMS']):
-                if team == __team:
+            self.calculate_intersections()
+
+            if self.max_num_team_intersections == self.minimum_teams_intersections:
+                print("Successfully minimized team intersections to be %u after %u iteratinos" % (self.max_num_team_intersections, iteration_number))
+                break
+            # self.print_intersections_stats(print_team_matrix=True)
+            # self.print_intersections_stats(print_team_matrix=False)
+
+            swaps_done = 0
+
+            for team in range(0, settings['NUM_TEAMS']):
+                comp_team = 1 if team == 0 else 0
+
+                max_intr = self.team_intersections_matrix[team][comp_team]
+                min_intr = self.team_intersections_matrix[team][comp_team]
+
+                max_intr_team = comp_team
+                min_intr_team = comp_team
+
+                for __team in range(0, settings['NUM_TEAMS']):
+                    if team == __team:
+                        continue
+
+                    num_intr = self.team_intersections_matrix[team][__team]
+
+                    if num_intr >= max_intr:
+                        max_intr_team = __team
+                        max_intr = num_intr
+
+                    if self.team_intersections_matrix[team][__team] <= min_intr:
+                        min_intr_team = __team
+                        min_intr = num_intr
+
+                # on each iteration we only deal with teams who make our maximum
+                if max_intr != self.max_num_team_intersections:
                     continue
 
-                num_intr = self.team_intersections_matrix[team][__team]
+                for r in self.rounds:
+                    table_with_max = None
+                    player_from_max = None
+                    table_with_min = None
+                    player_from_min = None
+                    for t in r.tables:
+                        player_with_max_list = [p for p in t.players if p.team == max_intr_team + 1]
+                        player_with_min_list = [p for p in t.players if p.team == min_intr_team + 1]
+                        our_player_list = [p for p in t.players if p.team == team + 1]
+                        if our_player_list and player_with_max_list:
+                            table_with_max = t
+                            player_from_max = player_with_max_list[0]
+                        if not our_player_list and player_with_min_list:
+                            table_with_min = t
+                            player_from_min = player_with_min_list[0]
 
-                if num_intr >= max_intr:
-                    max_intr_team = __team
-                    max_intr = num_intr
+                    if table_with_min is not None and table_with_max is not None:
+                        unique_teams = list(set([p.team for p in table_with_max.players] + [p.team for p in table_with_min.players]))
+                        # this means we can safely swap, because to team intersections are possible
+                        if len(unique_teams) == 8:
+                            previous_intersections = self.max_num_team_intersections
+                            table_with_max.players.remove(player_from_max)
+                            table_with_max.players.append(player_from_min)
+                            table_with_min.players.remove(player_from_min)
+                            table_with_min.players.append(player_from_max)
+                            self.calculate_intersections()
+                            if self.max_num_team_intersections > previous_intersections:
+                                # revert bad swapping
+                                table_with_min.players.remove(player_from_max)
+                                table_with_min.players.append(player_from_min)
+                                table_with_max.players.remove(player_from_min)
+                                table_with_max.players.append(player_from_max)
+                                self.calculate_intersections()
+                            else:
+                                swaps_done += 1
+                                break
 
-                if self.team_intersections_matrix[team][__team] <= min_intr:
-                    min_intr_team = __team
-                    min_intr = num_intr
+            if swaps_done == 0:
+                print("No more swaps can be done, finishing minimization after %u iterations", iteration_number)
+                break
 
-            # TODO: p.3 and the rest
+            iteration_number += 1
+
+        if iteration_number == MAX_ITERS:
+            print("Reached maximum iterations during team intersections minimization")
+            self.calculate_intersections()
+            self.print_intersections_stats()
 
     # very simple and slow algorithm for now
     def minimize_players_intersections(self):
@@ -334,8 +402,16 @@ def main():
     tournament.print_intersections_stats(print_team_matrix=True)
 
     tournament.remove_internal_intersections()
+    print("Intersection stats after removing internal intersections:")
+    tournament.print_intersections_stats(print_team_matrix=True)
+
     tournament.minimize_team_intersections()
+    print("Intersection stats after minimizing team intersections:")
+    tournament.print_intersections_stats(print_team_matrix=True)
+
     tournament.minimize_players_intersections()
+    print("Intersection stats after minimizing player intersections:")
+    tournament.print_intersections_stats(print_team_matrix=True)
 
     tournament.calculate_intersections()
     print("New intersection stats:")
