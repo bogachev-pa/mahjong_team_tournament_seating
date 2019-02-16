@@ -278,26 +278,67 @@ class Tournament(object):
         print("Possible minimum = %u" % self.minimum_players_intersections)
         iteration_number = 0
 
-        while True:
+        MAX_ITERS = 2000
+
+        while iteration_number < MAX_ITERS:
             self.calculate_intersections()
-            self.print_intersections_stats()
             if self.max_num_player_intersections == self.minimum_players_intersections:
                 print("Successfully minimized players intersections after %u iterations" % iteration_number)
-                break
-
-            if iteration_number == settings['MAX_ITERATIONS']:
-                print("Limit of iterations reached, could not minimize players intersections further")
                 break
 
             print("")
             print("Iteration #%u" % iteration_number)
 
-            # FIXME: this is stub
-            print("This is stub, cannot yet minimize players intersections")
-            print("")
-            break
+            swaps_done = 0
+
+            for player in range(0, settings['NUM_PLAYERS']):
+                comp_player = 1 if player == 0 else 0
+
+                max_intr = self.player_intersections_matrix[player][comp_player]
+                min_intr = self.player_intersections_matrix[player][comp_player]
+
+                max_intr_player = comp_player
+                min_intr_player = comp_player
+
+                for __player in range(0, settings['NUM_PLAYERS']):
+                    if player == __player:
+                        continue
+
+                    num_intr = self.player_intersections_matrix[player][__player]
+
+                    if num_intr >= max_intr:
+                        max_intr_player = __player
+                        max_intr = num_intr
+
+                    if self.player_intersections_matrix[player][__player] <= min_intr:
+                        min_intr_player = __player
+                        min_intr = num_intr
+
+                # on each iteration we only deal with players who make our maximum
+                if max_intr != self.max_num_player_intersections:
+                    continue
+
+                for r in self.rounds:
+                    table_with_max = None
+                    table_with_min = None
+                    for t in r.tables:
+                        if len([p for p in t.players if p.player_id == player + 1 or p.player_id == __player + 1]) != 2:
+                            # not our round
+                            continue
+
+                        # TODO: finish this code, swap the player with the other player from our team
+                        # in a way similar to team intersections minimization
+
+            if swaps_done == 0:
+                print("No more swaps can be done, finishing minimization after %u iterations", iteration_number)
+                break
 
             iteration_number += 1
+
+        if iteration_number == MAX_ITERS:
+            print("Reached maximum iterations during team intersections minimization")
+            self.calculate_intersections()
+            self.print_intersections_stats()
 
 
 def generate_tournament_from_text(text):
